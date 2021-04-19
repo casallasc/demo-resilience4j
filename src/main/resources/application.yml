@@ -1,0 +1,27 @@
+server:
+  port: 80
+
+management.health.circuitbreakers.enabled: true
+
+resilience4j.circuitbreaker:
+    configs:
+        default:
+            registerHealthIndicator: true
+            slidingWindowSize: 3
+            minimumNumberOfCalls: 2
+            permittedNumberOfCallsInHalfOpenState: 3
+            automaticTransitionFromOpenToHalfOpenEnabled: true
+            waitDurationInOpenState: 5s
+            failureRateThreshold: 50
+            eventConsumerBufferSize: 10
+            recordExceptions:
+                - com.demoresilience4j.service.exception.PaymentException
+        shared:
+            slidingWindowSize: 100
+            permittedNumberOfCallsInHalfOpenState: 30
+            waitDurationInOpenState: 1s
+            failureRateThreshold: 50
+            eventConsumerBufferSize: 10
+    instances:
+        flexPayment:
+            baseConfig: default
