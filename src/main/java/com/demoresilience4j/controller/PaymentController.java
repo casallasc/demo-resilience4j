@@ -2,7 +2,6 @@ package com.demoresilience4j.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,7 +15,6 @@ import io.vavr.CheckedFunction1;
 
 
 @RestController
-@RequestMapping("/payment")
 public class PaymentController {
 
 	@Autowired
@@ -25,9 +23,10 @@ public class PaymentController {
 	
 	public PaymentController(@Autowired CircuitBreakerRegistry circuitBreakerRegistry) {
 		 this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("flexPayment");
+		 System.out.println(this.circuitBreaker.getCircuitBreakerConfig());
 	}
 	
-	@GetMapping
+	@GetMapping("/payment")
 	public String pay(@RequestParam("account") String account, @RequestParam("amount") String amount) throws Throwable {
 		return Decorators.ofCheckedFunction(payFn())
         .withCircuitBreaker(circuitBreaker)
@@ -37,4 +36,9 @@ public class PaymentController {
 	private CheckedFunction1<PaymentRequest, String> payFn() {
         return req -> paymentService.pay(req);
     }
+	
+	@GetMapping("/change")
+	public boolean change() throws Throwable {
+		return paymentService.change();
+	}
 }
