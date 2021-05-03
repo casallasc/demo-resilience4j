@@ -12,6 +12,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.decorators.Decorators;
 import io.vavr.CheckedFunction1;
+import io.vavr.control.Try;
 
 
 @RestController
@@ -23,22 +24,40 @@ public class PaymentController {
 	
 	public PaymentController(@Autowired CircuitBreakerRegistry circuitBreakerRegistry) {
 		 this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("flexPayment");
-		 System.out.println(this.circuitBreaker.getCircuitBreakerConfig());
 	}
 	
 	@GetMapping("/payment")
 	public String pay(@RequestParam("account") String account, @RequestParam("amount") String amount) throws Throwable {
-		return Decorators.ofCheckedFunction(payFn())
-        .withCircuitBreaker(circuitBreaker)
-        .apply(new PaymentRequest(account, amount));
+		return Try.of(() -> Decorators.ofCheckedFunction(payFn())
+				.withCircuitBreaker(circuitBreaker)
+				.apply(new PaymentRequest(account, amount)))
+				.onFailure(ex -> log(ex))
+				.getOrElse("Fail!");
+	}
+	
+	@GetMapping("/payFailed")
+	public String payFailed(@RequestParam("account") String account, @RequestParam("amount") String amount) throws Throwable {
+		return Try.of(() -> Decorators.ofCheckedFunction(payFailedFn())
+				.withCircuitBreaker(circuitBreaker)
+				.apply(new PaymentRequest(account, amount)))
+				.onFailure(ex -> log(ex))
+				.getOrElse("Fail!");
 	}
 	
 	private CheckedFunction1<PaymentRequest, String> payFn() {
         return req -> paymentService.pay(req);
     }
 	
+	private CheckedFunction1<PaymentRequest, String> payFailedFn() {
+        return req -> paymentService.payFailed(req);
+    }
+	
 	@GetMapping("/change")
-	public boolean change() throws Throwable {
+	public String change() throws Throwable {
 		return paymentService.change();
+	}
+
+	private void log(Throwable t) {
+		System.out.println(t.getClass().getName() + ": " + t.getMessage());
 	}
 }
